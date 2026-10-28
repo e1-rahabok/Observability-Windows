@@ -62,6 +62,6 @@ Source of GPU counter definitions: System Monitor counters exposed by WDDM and s
 
 ## Windows Internals and driver references
 
-- **WDDM architecture:** the kernel-mode driver (dxgkrnl, the graphics kernel) schedules GPU work and manages VRAM. Reference: https://learn.microsoft.com/windows-hardware/drivers/display/windows-display-driver-model-architecture
+- **WDDM architecture:** the kernel-mode driver (dxgkrnl, the graphics kernel) schedules GPU work and manages VRAM. Reference: https://learn.microsoft.com/windows-hardware/drivers/display/windows-vista-and-later-display-driver-model-architecture
 - **GPUView:** visualizes GPU queues and memory charts per adapter and process. Reference: https://learn.microsoft.com/windows-hardware/drivers/display/memory-charts
 - **Sysinternals:** Process Explorer shows per-process GPU use on Windows 10+. https://learn.microsoft.com/en-us/sysinternals/downloads/process-explorer

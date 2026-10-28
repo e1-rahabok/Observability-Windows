@@ -61,7 +61,7 @@ Status: all entries unverified.
 
 - **Unit:** events (count per log entry).
 - **Source:** Windows Event Log, channel `System`, provider `Microsoft-Windows-WHEA-Logger`.
-- **Reference:** https://learn.microsoft.com/windows-hardware/drivers/debugger/windows-hardware-error-architecture (WHEA overview).
+- **Reference:** https://learn.microsoft.com/windows-hardware/drivers/whea/introduction-to-the-windows-hardware-error-architecture (WHEA overview).
 - **Pitfall:** Corrected errors are logged even when the system recovers. Correlate with CPU, memory, or PCIe device before replacing hardware.
 
 ### Kernel crashes (bugcheck)
