@@ -6,10 +6,39 @@ Scope excludes cgroups (no Windows equivalent). Windows job objects are noted on
 
 ## Verification status
 
-- **Status of every claim: unverified.** Entries were written from Microsoft Learn documentation and the *Windows Internals* book references. No live Windows system was queried.
-- Each entry gives a **Reference** (counter path, WMI/CIM class, or Microsoft Learn URL) for verification.
-- Verify on a live machine with `Get-Counter`, `Get-CimInstance`, or Performance Monitor (`perfmon`).
-- Record the Windows build (`[System.Environment]::OSVersion` or `winver`) with any verification result.
+Each entry carries one of these **Status** values:
+
+- **source-checked:** the Microsoft Learn page cited for the claim was read on 2026-10-29 and supports it. Threshold values are copied from that page.
+- **partly checked:** the cited page resolves, but the specific claim (field name, option, or default) was not read.
+- **unverified:** no primary Microsoft source was found for the claim. Treat it as an assumption.
+
+No entry has been confirmed on a live Windows system yet. To verify on a live machine, use `Get-Counter`, `Get-CimInstance`, or Performance Monitor (`perfmon`), and record the Windows build (`[System.Environment]::OSVersion` or `winver`) with the result.
+
+Source-by-source results, including links that were removed and why, are in [SOURCES.md](SOURCES.md). Terms are defined in [GLOSSARY.md](GLOSSARY.md).
+
+## Primary sources
+
+Start here before adding a new threshold. Prefer these over product-specific pages.
+
+- [Troubleshoot issues using Performance Monitor](https://learn.microsoft.com/troubleshoot/windows-server/support-tools/troubleshoot-issues-performance-monitor): CPU counters and thresholds.
+- [Scenario guide: Troubleshoot performance problems in Windows](https://learn.microsoft.com/troubleshoot/windows-server/performance/troubleshoot-performance-problems-in-windows): the 18 core counters with healthy, warning, and critical thresholds.
+- [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters): network counter families.
+- [Memory Performance Information](https://learn.microsoft.com/windows/win32/memory/memory-performance-information): mapping of memory counters to API structures and Task Manager.
+- [Collecting Performance Data](https://learn.microsoft.com/windows/win32/perfctrs/collecting-performance-data): how PDH computes `_Total` and `Process` values.
+- [Performance Counters Portal](https://learn.microsoft.com/windows/win32/perfctrs/performance-counters-portal): index of counter objects.
+- [Profile the CPU and GPU with timing captures (PIX)](https://learn.microsoft.com/windows/pix/timing-captures/timing-captures-overview): GPU counters and residency.
+- [Win32 CIM provider classes](https://learn.microsoft.com/windows/win32/cimwin32prov/win32-operatingsystem): WMI fields such as `Win32_OperatingSystem`, `Win32_Process`, and `Win32_Processor`.
+
+## Page format
+
+Each metric entry gives:
+
+- **Unit**
+- **Formula**
+- **Source** (counter set, WMI/CIM class, API, or tool)
+- **Reference** (counter path, WMI/CIM class, or Microsoft Learn URL)
+- **Pitfall**
+- **Status** (`source-checked`, `partly checked`, or `unverified`, as defined above)
 
 ## Conventions
 
