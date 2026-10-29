@@ -2,43 +2,47 @@
 
 Interface throughput, IP, TCP, UDP, output queue, errors, and RSC for Windows.
 
-Status: all entries unverified.
+Status: source-checked against Microsoft Learn on 2026-10-29. Not yet verified on a live machine. Status values are defined in the [root README](../README.md#verification-status).
 
-Source for grouping: https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters
+Source for grouping: [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (sections: Resource Utilization, Potential Network Problems, Receive Side Coalescing).
 
 ## Interface throughput
 
 ### Bytes Total/sec (Network Interface)
 
 - **Unit:** bytes per second.
-- **Formula:** Δ(bytes received + bytes sent) / Δt.
+- **Formula:** Δ(bytes received + bytes sent) / Δt. Utilization = (Bytes Total/sec × 8) / link speed in bits per second × 100.
 - **Source:** `Network Interface(<adapter>)\Bytes Total/sec`; `Bytes Received/sec`, `Bytes Sent/sec`.
-- **Reference:** https://learn.microsoft.com/biztalk/technical-guides/checklist-measuring-performance-on-hyper-v#measuring-network-performance (utilization = bytes × 8 / adapter bandwidth).
-- **Pitfall:** Counters include framing overhead. Utilization = (Bytes Total/sec × 8) / Current Bandwidth × 100. Thresholds in the source: under 40% healthy, 41–64% monitor, 65–100% critical.
+- **Reference:** [Scenario guide: Troubleshoot performance problems in Windows](https://learn.microsoft.com/troubleshoot/windows-server/performance/troubleshoot-performance-problems-in-windows#network) (healthy: under 50% of link speed; warning: 50–80%; critical: over 80%).
+- **Status:** source-checked.
+- **Pitfall:** Network speed is in bits and counters are in bytes. A 1 Gb/s adapter can carry about 125 MB/s. The guide's own example uses this conversion.
 
 ### Current Bandwidth (Network Interface, WMI)
 
 - **Unit:** bits per second.
 - **Source:** WMI `Win32_NetworkAdapter` (`Speed`); `Network Interface(<adapter>)\Current Bandwidth`.
-- **Reference:** https://learn.microsoft.com/biztalk/technical-guides/using-the-performance-analysis-of-logs-pal-tool#understanding-the-pal-tool-report-for-microsoft-biztalk-server-2010 (network utilization analysis uses current bandwidth).
-- **Pitfall:** Speed reports link speed negotiated. A half-duplex fallback shows lower bandwidth and can cut throughput.
+- **Reference:** [Win32_NetworkAdapter class](https://learn.microsoft.com/windows/win32/cimwin32prov/win32-networkadapter). Counter name was not checked on this pass.
+- **Status:** partly checked.
+- **Pitfall:** Speed is the negotiated link speed. A link that negotiates a lower speed or half duplex reduces throughput, and utilization percentages will change with it.
 
 ### Packets Received/sec, Packets Sent/sec (Network Interface)
 
 - **Unit:** packets per second.
 - **Source:** `Network Interface(<adapter>)\Packets Received/sec`, `\Packets Sent/sec`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters#resource-utilization
-- **Pitfall:** Small-packet workloads saturate the CPU before bandwidth. Check Processor Information DPC time (see cpu/) alongside.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Resource Utilization). No threshold.
+- **Status:** source-checked (no threshold).
+- **Pitfall:** Small-packet workloads can load the CPU before the link fills. Check Processor DPC time (see [cpu/](../cpu/README.md)) alongside.
 
 ## Queueing
 
 ### Output Queue Length (Network Interface)
 
-- **Unit:** packets (average over interval).
-- **Formula:** Packets waiting in the NDIS output queue.
+- **Unit:** packets (average over the interval).
+- **Formula:** Length of the output packet queue.
 - **Source:** `Network Interface(<adapter>)\Output Queue Length`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters#resource-utilization (queue longer than 2 causes delays); https://learn.microsoft.com/biztalk/technical-guides/checklist-measuring-performance-on-hyper-v#measuring-network-performance (0 healthy, 1–2 caution, above 2 critical).
-- **Pitfall:** The source says NDIS queues requests, so a healthy value is 0. A nonzero value is a bottleneck signal, not a normal state.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (if the length is longer than 2, delays occur; because NDIS queues requests, the value should always be 0).
+- **Status:** source-checked.
+- **Pitfall:** A nonzero value is a bottleneck signal, not a normal state.
 
 ## Errors and discards
 
@@ -47,15 +51,17 @@ Source for grouping: https://learn.microsoft.com/windows-server/networking/techn
 - **Unit:** packets (count).
 - **Formula:** Δerrors / Δt.
 - **Source:** `Network Interface(<adapter>)\Packets Received Errors`, `\Packets Outbound Errors`.
-- **Reference:** https://learn.microsoft.com/azure/service-fabric/monitor-service-fabric-reference#performance-metrics
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Potential Network Problems).
+- **Status:** source-checked.
 - **Pitfall:** Any sustained nonzero rate needs investigation at the driver or cabling layer.
 
 ### Packets Received Discarded, Packets Outbound Discarded (Network Interface)
 
 - **Unit:** packets (count).
 - **Source:** `Network Interface(<adapter>)\Packets Received Discarded`, `\Packets Outbound Discarded`.
-- **Reference:** https://learn.microsoft.com/azure/service-fabric/monitor-service-fabric-reference#performance-metrics
-- **Pitfall:** Discards happen when buffers are full or filters reject packets. Compare with Output Queue Length.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Potential Network Problems).
+- **Status:** source-checked.
+- **Pitfall:** Compare discards with Output Queue Length. Discards that rise with a growing queue point to a saturated path.
 
 ## IP
 
@@ -63,8 +69,9 @@ Source for grouping: https://learn.microsoft.com/windows-server/networking/techn
 
 - **Unit:** datagrams per second.
 - **Source:** `IPv4\Datagrams Received/sec`, `IPv4\Datagrams Sent/sec`; same for `IPv6`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters#resource-utilization
-- **Pitfall:** Counts include ICMP and multicast on that stack. Not a per-application measure.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Resource Utilization). No threshold.
+- **Status:** source-checked (no threshold).
+- **Pitfall:** These are stack-wide totals. Use them for trend, not per-application attribution.
 
 ## TCP
 
@@ -72,23 +79,26 @@ Source for grouping: https://learn.microsoft.com/windows-server/networking/techn
 
 - **Unit:** segments per second.
 - **Source:** `TCPv4\Segments Received/sec`, `TCPv4\Segments Sent/sec`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters#resource-utilization
-- **Pitfall:** Segment size varies with MSS and offload. Interpret rates with Bytes Total/sec.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Resource Utilization).
+- **Status:** source-checked.
+- **Pitfall:** Segment size varies with MSS and offload. Interpret rates together with Bytes Total/sec.
 
 ### Segments Retransmitted/sec (TCPv4, TCPv6)
 
 - **Unit:** segments per second.
 - **Formula:** Δretransmitted segments / Δt. Retransmission ratio = Segments Retransmitted/sec / Segments Sent/sec.
 - **Source:** `TCPv4\Segments Retransmitted/sec`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters#resource-utilization
-- **Pitfall:** No universal threshold. Compare a ratio against the baseline for the same path. A rising ratio points to loss, congestion, or a faulty path.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Resource Utilization). No threshold.
+- **Status:** source-checked (no threshold).
+- **Pitfall:** No universal threshold. Compare the ratio against the baseline for the same path.
 
-### Connections Established (TCPv4, TCPv6)
+### Connection Failures, Connections Reset (TCPv4, TCPv6)
 
-- **Unit:** count (gauge).
-- **Source:** `TCPv4\Connections Established`.
-- **Reference:** https://learn.microsoft.com/host-integration-server/core/useful-performance-counters2 (use as user-load proxy).
-- **Pitfall:** Counts currently established connections. TIME_WAIT and CLOSE_WAIT are not included. Use `Get-NetTCPConnection` for state breakdown.
+- **Unit:** count (rate per counter).
+- **Source:** `TCPv4\Connection Failures`, `TCPv4\Connections Reset`.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Potential Network Problems).
+- **Status:** source-checked.
+- **Pitfall:** Resets can be normal application behavior. Confirm with the application before treating them as network faults.
 
 ## UDP
 
@@ -97,28 +107,31 @@ Source for grouping: https://learn.microsoft.com/windows-server/networking/techn
 - **Unit:** datagrams (count).
 - **Formula:** Δerrors / Δt.
 - **Source:** `UDPv4\Datagrams Received Errors`.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters
-- **Pitfall:** Errors often mean no listening socket on the port. Confirm with the application before treating it as a network fault.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (listed under Potential Network Problems).
+- **Status:** source-checked.
+- **Pitfall:** Errors often mean no listening socket on the port. Confirm with the application before treating them as a network fault.
 
 ## Receive Side Coalescing (RSC)
 
 ### RSC counters
 
 - **Unit:** count or rate (per counter).
-- **Source:** Counters listed under "Receive Side Coalescing (RSC) performance" in the Learn source.
-- **Reference:** https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters (section 3).
-- **Pitfall:** RSC applies only to supported NICs and VMs. Absence of RSC counters is normal on unsupported hardware.
+- **Source:** `Network Adapter(<adapter>)\TCP Active RSC Connections`, `\TCP RSC Average Packet Size`, `\TCP RSC Coalesced Packets/sec`, `\TCP RSC Exceptions/sec`.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) (Receive Side Coalescing section).
+- **Status:** source-checked.
+- **Pitfall:** RSC applies only to supported NICs and configurations. Missing RSC counters are normal on unsupported hardware.
 
 ## Per-process network
 
-### Process network bytes (Windows Performance Counters)
+### Process I/O bytes (Process)
 
 - **Unit:** bytes.
-- **Source:** `Process(<name>)\IO Data Bytes/sec`, `\IO Other Bytes/sec` (I/O, not network-only); `.NET` socket counters listed in https://learn.microsoft.com/dotnet/framework/debug-trace-profile/performance-counters#networking-performance-counters.
-- **Reference:** https://learn.microsoft.com/biztalk/technical-guides/checklist-measuring-performance-on-hyper-v (process-level network counters are not isolated).
-- **Pitfall:** `Process\IO Data Bytes/sec` includes disk and pipe I/O as well as sockets. Windows does not provide a per-process network counter in the base performance set. Use ETW (`Microsoft-Windows-TCPIP`) or Resource Monitor for per-process network use.
+- **Source:** `Process(<name>)\IO Data Bytes/sec`, `\IO Other Bytes/sec`.
+- **Reference:** [Network-Related Performance Counters](https://learn.microsoft.com/windows-server/networking/technologies/network-subsystem/net-sub-performance-counters) does not list a per-process network counter. The .NET socket counters are in [.NET performance counters: networking](https://learn.microsoft.com/dotnet/framework/debug-trace-profile/performance-counters#networking-performance-counters) (content not checked on this pass).
+- **Status:** partly checked.
+- **Pitfall:** `Process\IO Data Bytes/sec` counts all I/O (disk, pipes, and sockets), not network traffic alone. For per-process network use, use Resource Monitor or an ETW trace. The ETW provider name was not checked against Microsoft Learn.
 
-## Windows Internals references
+## Windows Internals and tool references
 
-- **TCP/IP stack:** tcpip.sys, NDIS miniport, and the Winsock layer. Reference: *Windows Internals* (networking chapter).
-- **Sysinternals TCPView:** per-connection state and process owner. https://learn.microsoft.com/en-us/sysinternals/downloads/tcpview
+- **TCP/IP stack:** tcpip.sys, NDIS miniport, and the Winsock layer. Reference: *Windows Internals* (networking chapter). Not a public API.
+- **Sysinternals TCPView:** per-connection state and process owner. [Sysinternals TCPView](https://learn.microsoft.com/en-us/sysinternals/downloads/tcpview).
